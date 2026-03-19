@@ -1,737 +1,296 @@
-<!DOCTYPE html>
-<html lang="ru">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Трекер Продуктивности</title>
-    <style>
-        * {
-            box-sizing: border-box;
-            margin: 0;
-            padding: 0;
-        }
+<script>
+    // Хранилище целей
+    let goals = [];
+    
+    // ID для таймеров
+    let timerIntervals = {};
 
-        body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            min-height: 100vh;
-            padding: 20px;
-        }
-
-        .container {
-            max-width: 1200px;
-            margin: 0 auto;
-        }
-
-        h1 {
-            text-align: center;
-            color: white;
-            margin-bottom: 30px;
-            font-size: 2.5em;
-            text-shadow: 2px 2px 4px rgba(0,0,0,0.2);
-        }
-
-        /* Панель добавления новой цели */
-        .add-goal-panel {
-            background: white;
-            border-radius: 20px;
-            padding: 30px;
-            margin-bottom: 30px;
-            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
-        }
-
-        .add-goal-panel h2 {
-            color: #333;
-            margin-bottom: 20px;
-            font-size: 1.5em;
-        }
-
-        .add-goal-form {
-            display: flex;
-            gap: 15px;
-            flex-wrap: wrap;
-            align-items: flex-end;
-        }
-
-        .form-group {
-            flex: 1;
-            min-width: 200px;
-        }
-
-        .form-group label {
-            display: block;
-            margin-bottom: 8px;
-            color: #666;
-            font-weight: 500;
-        }
-
-        .form-group input {
-            width: 100%;
-            padding: 12px;
-            border: 2px solid #e0e0e0;
-            border-radius: 10px;
-            font-size: 1.1em;
-            transition: border-color 0.3s;
-        }
-
-        .form-group input:focus {
-            outline: none;
-            border-color: #667eea;
-        }
-
-        .add-goal-btn {
-            padding: 12px 30px;
-            background: #4CAF50;
-            color: white;
-            border: none;
-            border-radius: 10px;
-            font-size: 1.1em;
-            cursor: pointer;
-            transition: background 0.3s;
-            white-space: nowrap;
-            height: 50px;
-        }
-
-        .add-goal-btn:hover {
-            background: #45a049;
-        }
-
-        /* Сетка целей */
-        .goals-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
-            gap: 25px;
-            margin-bottom: 30px;
-        }
-
-        /* Карточка цели */
-        .goal-card {
-            background: white;
-            border-radius: 20px;
-            padding: 25px;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
-            transition: transform 0.3s, box-shadow 0.3s;
-            position: relative;
-            overflow: hidden;
-        }
-
-        .goal-card:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 15px 40px rgba(0,0,0,0.3);
-        }
-
-        .goal-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 15px;
-            padding-bottom: 15px;
-            border-bottom: 2px solid #f0f0f0;
-        }
-
-        .goal-title {
-            font-size: 1.4em;
-            font-weight: 600;
-            color: #333;
-            word-break: break-word;
-            flex: 1;
-        }
-
-        .goal-actions {
-            display: flex;
-            gap: 10px;
-        }
-
-        .edit-btn, .delete-btn {
-            background: none;
-            border: none;
-            font-size: 1.2em;
-            cursor: pointer;
-            padding: 5px;
-            border-radius: 5px;
-            transition: background 0.3s;
-        }
-
-        .edit-btn {
-            color: #667eea;
-        }
-
-        .edit-btn:hover {
-            background: #e8eaff;
-        }
-
-        .delete-btn {
-            color: #dc3545;
-        }
-
-        .delete-btn:hover {
-            background: #ffe6e8;
-        }
-
-        /* Прогресс цели */
-        .goal-progress {
-            margin: 20px 0;
-        }
-
-        .progress-stats {
-            display: flex;
-            justify-content: space-between;
-            margin-bottom: 8px;
-            color: #666;
-            font-weight: 500;
-            font-size: 0.95em;
-        }
-
-        .progress-bar-bg {
-            width: 100%;
-            height: 20px;
-            background: #e0e0e0;
-            border-radius: 10px;
-            overflow: hidden;
-        }
-
-        .progress-bar-fill {
-            height: 100%;
-            background: linear-gradient(90deg, #667eea, #764ba2);
-            width: 0%;
-            transition: width 0.5s ease;
-            border-radius: 10px;
-        }
-
-        .goal-status {
-            text-align: center;
-            margin-top: 10px;
-            font-weight: 600;
-            color: #333;
-        }
-
-        /* Таймер в карточке */
-        .goal-timer {
-            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
-            border-radius: 15px;
-            padding: 20px;
-            margin: 20px 0;
-            color: white;
-            text-align: center;
-        }
-
-        .timer-display {
-            font-size: 2.5em;
-            font-weight: bold;
-            font-family: monospace;
-            margin-bottom: 15px;
-            text-shadow: 2px 2px 4px rgba(0,0,0,0.2);
-        }
-
-        .timer-controls {
-            display: flex;
-            gap: 10px;
-            justify-content: center;
-            flex-wrap: wrap;
-        }
-
-        .timer-btn {
-            padding: 8px 20px;
-            border: none;
-            border-radius: 25px;
-            font-size: 0.95em;
-            font-weight: 600;
-            cursor: pointer;
-            transition: transform 0.2s, box-shadow 0.2s;
-            background: white;
-            color: #333;
-            flex: 1;
-            min-width: 80px;
-        }
-
-        .timer-btn:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
-        }
-
-        .timer-btn.start {
-            background: #4CAF50;
-            color: white;
-        }
-
-        .timer-btn.stop {
-            background: #f44336;
-            color: white;
-        }
-
-        .timer-btn.reset {
-            background: #ff9800;
-            color: white;
-        }
-
-        /* Ручное добавление времени */
-        .manual-add {
-            display: flex;
-            gap: 10px;
-            margin-top: 15px;
-            align-items: center;
-        }
-
-        .manual-add input {
-            flex: 1;
-            padding: 10px;
-            border: 2px solid #e0e0e0;
-            border-radius: 10px;
-            font-size: 1em;
-            text-align: center;
-        }
-
-        .manual-add button {
-            padding: 10px 20px;
-            background: #4CAF50;
-            color: white;
-            border: none;
-            border-radius: 10px;
-            cursor: pointer;
-            transition: background 0.3s;
-            white-space: nowrap;
-        }
-
-        .manual-add button:hover {
-            background: #45a049;
-        }
-
-        /* Кнопка сброса всех данных */
-        .reset-all-btn {
-            display: block;
-            width: 100%;
-            max-width: 300px;
-            margin: 30px auto 0;
-            padding: 15px 30px;
-            background: #dc3545;
-            color: white;
-            border: none;
-            border-radius: 10px;
-            font-size: 1.1em;
-            cursor: pointer;
-            transition: background 0.3s;
-        }
-
-        .reset-all-btn:hover {
-            background: #c82333;
-        }
-
-        /* Режим редактирования */
-        .edit-mode {
-            margin-top: 15px;
-        }
-
-        .edit-mode input {
-            width: 100%;
-            padding: 10px;
-            border: 2px solid #667eea;
-            border-radius: 10px;
-            font-size: 1.1em;
-            margin-bottom: 10px;
-        }
-
-        .edit-actions {
-            display: flex;
-            gap: 10px;
-        }
-
-        .save-btn, .cancel-btn {
-            flex: 1;
-            padding: 10px;
-            border: none;
-            border-radius: 10px;
-            cursor: pointer;
-            font-weight: 600;
-        }
-
-        .save-btn {
-            background: #4CAF50;
-            color: white;
-        }
-
-        .cancel-btn {
-            background: #6c757d;
-            color: white;
-        }
-
-        /* Пустое состояние */
-        .empty-state {
-            text-align: center;
-            color: white;
-            padding: 50px;
-            background: rgba(255,255,255,0.1);
-            border-radius: 20px;
-            font-size: 1.2em;
-        }
-    </style>
-</head>
-<body>
-    <div class="container">
-        <h1>🎯 Трекер Продуктивности</h1>
-        
-        <!-- Панель добавления новой цели -->
-        <div class="add-goal-panel">
-            <h2>➕ Добавить новую цель</h2>
-            <div class="add-goal-form">
-                <div class="form-group">
-                    <label>Название цели</label>
-                    <input type="text" id="newGoalTitle" placeholder="Например: Изучить Python" maxlength="50">
-                </div>
-                <div class="form-group">
-                    <label>Цель (часов)</label>
-                    <input type="number" id="newGoalHours" value="100" min="1" step="1">
-                </div>
-                <button class="add-goal-btn" onclick="addNewGoal()">➕ Добавить цель</button>
-            </div>
-        </div>
-
-        <!-- Сетка целей -->
-        <div id="goalsGrid" class="goals-grid"></div>
-
-        <!-- Кнопка сброса всех данных -->
-        <button class="reset-all-btn" onclick="resetAllData()">🔄 Сбросить все данные</button>
-    </div>
-
-    <script>
-        // Хранилище целей
-        let goals = [];
-        
-        // ID для таймеров
-        let timerIntervals = {};
-
-        // Загрузка данных из localStorage
-        function loadData() {
-            const savedGoals = localStorage.getItem('productivityGoals');
-            if (savedGoals) {
-                try {
-                    goals = JSON.parse(savedGoals);
-                    // Восстанавливаем состояние таймеров (все таймеры должны быть остановлены при загрузке)
-                    goals.forEach(goal => {
-                        if (goal.timerRunning) {
-                            goal.timerRunning = false;
-                        }
-                    });
-                } catch (e) {
-                    console.error('Ошибка загрузки данных:', e);
-                    goals = [];
-                }
-            } else {
-                // Цели по умолчанию, если ничего нет
-                goals = [
-                    {
-                        id: generateId(),
-                        title: 'Изучить Python',
-                        goalHours: 500,
-                        currentHours: 0,
-                        timerSeconds: 0,
-                        timerRunning: false
-                    },
-                    {
-                        id: generateId(),
-                        title: 'Чтение книг',
-                        goalHours: 100,
-                        currentHours: 0,
-                        timerSeconds: 0,
-                        timerRunning: false
+    // Загрузка данных из localStorage
+    function loadData() {
+        const savedGoals = localStorage.getItem('productivityGoals');
+        if (savedGoals) {
+            try {
+                goals = JSON.parse(savedGoals);
+                // Восстанавливаем состояние таймеров (все таймеры должны быть остановлены при загрузке)
+                goals.forEach(goal => {
+                    if (goal.timerRunning) {
+                        goal.timerRunning = false;
                     }
-                ];
+                });
+            } catch (e) {
+                console.error('Ошибка загрузки данных:', e);
+                goals = [];
             }
-            
-            renderGoals();
-        }
-
-        // Сохранение в localStorage
-        function saveData() {
-            localStorage.setItem('productivityGoals', JSON.stringify(goals));
-        }
-
-        // Генерация уникального ID
-        function generateId() {
-            return Date.now() + '-' + Math.random().toString(36).substr(2, 9);
-        }
-
-        // Форматирование времени
-        function formatTime(seconds) {
-            const hours = Math.floor(seconds / 3600);
-            const minutes = Math.floor((seconds % 3600) / 60);
-            const secs = seconds % 60;
-            return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
-        }
-
-        // Добавление новой цели
-        function addNewGoal() {
-            const titleInput = document.getElementById('newGoalTitle');
-            const hoursInput = document.getElementById('newGoalHours');
-            
-            const title = titleInput.value.trim();
-            const goalHours = parseInt(hoursInput.value);
-            
-            if (!title) {
-                alert('Введите название цели');
-                return;
-            }
-            
-            if (!goalHours || goalHours <= 0) {
-                alert('Введите корректное количество часов');
-                return;
-            }
-            
-            const newGoal = {
-                id: generateId(),
-                title: title,
-                goalHours: goalHours,
-                currentHours: 0,
-                timerSeconds: 0,
-                timerRunning: false
-            };
-            
-            goals.push(newGoal);
-            saveData();
-            renderGoals();
-            
-            // Очищаем поля
-            titleInput.value = '';
-            hoursInput.value = '100';
-        }
-
-        // Удаление цели
-        function deleteGoal(goalId) {
-            if (confirm('Вы уверены, что хотите удалить эту цель?')) {
-                // Останавливаем таймер если он запущен
-                if (timerIntervals[goalId]) {
-                    clearInterval(timerIntervals[goalId]);
-                    delete timerIntervals[goalId];
+        } else {
+            // Цели по умолчанию, если ничего нет
+            goals = [
+                {
+                    id: generateId(),
+                    title: 'Изучить Python',
+                    goalHours: 500,
+                    currentHours: 0,
+                    timerSeconds: 0,
+                    timerRunning: false
+                },
+                {
+                    id: generateId(),
+                    title: 'Чтение книг',
+                    goalHours: 100,
+                    currentHours: 0,
+                    timerSeconds: 0,
+                    timerRunning: false
                 }
-                
-                goals = goals.filter(g => g.id !== goalId);
-                saveData();
-                renderGoals();
-            }
+            ];
         }
+        
+        renderGoals();
+    }
 
-        // Редактирование цели
-        function editGoal(goalId) {
-            const goal = goals.find(g => g.id === goalId);
-            if (!goal) return;
-            
-            // Создаем форму редактирования
-            const card = document.querySelector(`[data-goal-id="${goalId}"]`);
-            const content = card.querySelector('.goal-content');
-            
-            const editHtml = `
-                <div class="edit-mode">
-                    <input type="text" id="editTitle-${goalId}" value="${goal.title}" maxlength="50">
-                    <input type="number" id="editHours-${goalId}" value="${goal.goalHours}" min="1" step="1">
-                    <div class="edit-actions">
-                        <button class="save-btn" onclick="saveEdit('${goalId}')">Сохранить</button>
-                        <button class="cancel-btn" onclick="renderGoals()">Отмена</button>
-                    </div>
-                </div>
-            `;
-            
-            content.innerHTML = editHtml;
+    // Сохранение в localStorage
+    function saveData() {
+        localStorage.setItem('productivityGoals', JSON.stringify(goals));
+    }
+
+    // Генерация уникального ID
+    function generateId() {
+        return Date.now() + '-' + Math.random().toString(36).substr(2, 9);
+    }
+
+    // Форматирование времени
+    function formatTime(seconds) {
+        const hours = Math.floor(seconds / 3600);
+        const minutes = Math.floor((seconds % 3600) / 60);
+        const secs = seconds % 60;
+        return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+    }
+
+    // Добавление новой цели
+    function addNewGoal() {
+        const titleInput = document.getElementById('newGoalTitle');
+        const hoursInput = document.getElementById('newGoalHours');
+        
+        const title = titleInput.value.trim();
+        const goalHours = parseInt(hoursInput.value);
+        
+        if (!title) {
+            alert('Введите название цели');
+            return;
         }
-
-        // Сохранение редактирования
-        function saveEdit(goalId) {
-            const goal = goals.find(g => g.id === goalId);
-            if (!goal) return;
-            
-            const newTitle = document.getElementById(`editTitle-${goalId}`).value.trim();
-            const newHours = parseInt(document.getElementById(`editHours-${goalId}`).value);
-            
-            if (!newTitle) {
-                alert('Введите название цели');
-                return;
-            }
-            
-            if (!newHours || newHours <= 0) {
-                alert('Введите корректное количество часов');
-                return;
-            }
-            
-            goal.title = newTitle;
-            goal.goalHours = newHours;
-            
-            saveData();
-            renderGoals();
+        
+        if (!goalHours || goalHours <= 0) {
+            alert('Введите корректное количество часов');
+            return;
         }
+        
+        const newGoal = {
+            id: generateId(),
+            title: title,
+            goalHours: goalHours,
+            currentHours: 0,
+            timerSeconds: 0,
+            timerRunning: false
+        };
+        
+        goals.push(newGoal);
+        saveData();
+        renderGoals();
+        
+        // Очищаем поля
+        titleInput.value = '';
+        hoursInput.value = '100';
+    }
 
-        // Запуск таймера
-        function startTimer(goalId) {
-            const goal = goals.find(g => g.id === goalId);
-            if (!goal || goal.timerRunning) return;
-            
-            goal.timerRunning = true;
-            
-            timerIntervals[goalId] = setInterval(() => {
-                goal.timerSeconds++;
-                updateTimerDisplay(goalId);
-            }, 1000);
-            
-            saveData();
-        }
-
-        // Остановка таймера
-        function stopTimer(goalId) {
-            const goal = goals.find(g => g.id === goalId);
-            if (!goal || !goal.timerRunning) return;
-            
-            clearInterval(timerIntervals[goalId]);
-            delete timerIntervals[goalId];
-            
-            goal.timerRunning = false;
-            
-            // Добавляем время к прогрессу
-            if (goal.timerSeconds > 0) {
-                const hoursToAdd = goal.timerSeconds / 3600;
-                goal.currentHours = parseFloat((goal.currentHours + hoursToAdd).toFixed(2));
-                goal.timerSeconds = 0;
-            }
-            
-            updateTimerDisplay(goalId);
-            saveData();
-            renderGoals(); // Перерисовываем для обновления прогресса
-        }
-
-        // Сброс таймера
-        function resetTimer(goalId) {
-            const goal = goals.find(g => g.id === goalId);
-            if (!goal) return;
-            
-            if (goal.timerRunning) {
+    // Удаление цели
+    function deleteGoal(goalId) {
+        if (confirm('Вы уверены, что хотите удалить эту цель?')) {
+            // Останавливаем таймер если он запущен
+            if (timerIntervals[goalId]) {
                 clearInterval(timerIntervals[goalId]);
                 delete timerIntervals[goalId];
-                goal.timerRunning = false;
             }
             
-            goal.timerSeconds = 0;
-            updateTimerDisplay(goalId);
+            goals = goals.filter(g => g.id !== goalId);
             saveData();
+            renderGoals();
         }
+    }
 
-        // Обновление отображения таймера
-        function updateTimerDisplay(goalId) {
-            const goal = goals.find(g => g.id === goalId);
-            if (!goal) return;
-            
-            const timerElement = document.getElementById(`timer-${goalId}`);
-            if (timerElement) {
-                timerElement.textContent = formatTime(goal.timerSeconds);
+    // Редактирование цели
+    function editGoal(goalId) {
+        const goal = goals.find(g => g.id === goalId);
+        if (!goal) return;
+        
+        // Создаем форму редактирования
+        const card = document.querySelector(`[data-goal-id="${goalId}"]`);
+        const content = card.querySelector('.goal-content');
+        
+        const editHtml = `
+            <div class="edit-mode">
+                <input type="text" id="editTitle-${goalId}" value="${goal.title}" maxlength="50">
+                <input type="number" id="editHours-${goalId}" value="${goal.goalHours}" min="1" step="1">
+                <div class="edit-actions">
+                    <button class="save-btn" onclick="saveEdit('${goalId}')">Сохранить</button>
+                    <button class="cancel-btn" onclick="renderGoals()">Отмена</button>
+                </div>
+            </div>
+        `;
+        
+        content.innerHTML = editHtml;
+    }
+
+    // Сохранение редактирования
+    function saveEdit(goalId) {
+        const goal = goals.find(g => g.id === goalId);
+        if (!goal) return;
+        
+        const newTitle = document.getElementById(`editTitle-${goalId}`).value.trim();
+        const newHours = parseInt(document.getElementById(`editHours-${goalId}`).value);
+        
+        if (!newTitle) {
+            alert('Введите название цели');
+            return;
+        }
+        
+        if (!newHours || newHours <= 0) {
+            alert('Введите корректное количество часов');
+            return;
+        }
+        
+        goal.title = newTitle;
+        goal.goalHours = newHours;
+        
+        saveData();
+        renderGoals();
+    }
+
+    // Запуск таймера
+    function startTimer(goalId) {
+        const goal = goals.find(g => g.id === goalId);
+        if (!goal) return;
+        
+        // Если таймер уже запущен для этой цели, ничего не делаем
+        if (goal.timerRunning) {
+            return;
+        }
+        
+        // Останавливаем все другие запущенные таймеры (опционально, чтобы не было конфликтов)
+        goals.forEach(g => {
+            if (g.timerRunning && g.id !== goalId) {
+                stopTimer(g.id);
             }
-        }
-
-        // Ручное добавление времени
-        function addManualTime(goalId) {
-            const goal = goals.find(g => g.id === goalId);
-            if (!goal) return;
-            
-            const input = document.getElementById(`manual-${goalId}`);
-            const hours = parseFloat(input.value);
-            
-            if (hours && hours > 0) {
-                goal.currentHours = parseFloat((goal.currentHours + hours).toFixed(2));
-                input.value = '0';
-                saveData();
-                renderGoals();
-            } else {
-                alert('Введите положительное число часов');
-            }
-        }
-
-        // Отрисовка всех целей
-        function renderGoals() {
-            const grid = document.getElementById('goalsGrid');
-            
-            if (goals.length === 0) {
-                grid.innerHTML = '<div class="empty-state">✨ Добавьте свою первую цель!</div>';
-                return;
-            }
-            
-            let html = '';
-            goals.forEach(goal => {
-                const percentage = Math.min(100, (goal.currentHours / goal.goalHours) * 100);
-                const remaining = Math.max(0, goal.goalHours - goal.currentHours);
-                const isCompleted = goal.currentHours >= goal.goalHours;
-                
-                html += `
-                    <div class="goal-card" data-goal-id="${goal.id}">
-                        <div class="goal-header">
-                            <div class="goal-title">${goal.title}</div>
-                            <div class="goal-actions">
-                                <button class="edit-btn" onclick="editGoal('${goal.id}')" title="Редактировать">✏️</button>
-                                <button class="delete-btn" onclick="deleteGoal('${goal.id}')" title="Удалить">🗑️</button>
-                            </div>
-                        </div>
-                        
-                        <div class="goal-content">
-                            <!-- Прогресс -->
-                            <div class="goal-progress">
-                                <div class="progress-stats">
-                                    <span>Прогресс: ${goal.currentHours.toFixed(1)} ч</span>
-                                    <span>Цель: ${goal.goalHours} ч</span>
-                                </div>
-                                <div class="progress-bar-bg">
-                                    <div class="progress-bar-fill" style="width: ${percentage}%; ${isCompleted ? 'background: linear-gradient(90deg, #4CAF50, #45a049);' : ''}"></div>
-                                </div>
-                                <div class="goal-status">
-                                    ${isCompleted ? '🎉 Цель достигнута!' : `Осталось ${remaining.toFixed(1)} ч`}
-                                </div>
-                            </div>
-
-                            <!-- Таймер -->
-                            <div class="goal-timer">
-                                <div class="timer-display" id="timer-${goal.id}">${formatTime(goal.timerSeconds)}</div>
-                                <div class="timer-controls">
-                                    <button class="timer-btn start" onclick="startTimer('${goal.id}')" ${goal.timerRunning ? 'disabled' : ''}>Старт</button>
-                                    <button class="timer-btn stop" onclick="stopTimer('${goal.id}')" ${!goal.timerRunning ? 'disabled' : ''}>Стоп</button>
-                                    <button class="timer-btn reset" onclick="resetTimer('${goal.id}')">Сброс</button>
-                                </div>
-                            </div>
-
-                            <!-- Ручное добавление -->
-                            <div class="manual-add">
-                                <input type="number" id="manual-${goal.id}" value="0" min="0" step="0.5" placeholder="Часы">
-                                <button onclick="addManualTime('${goal.id}')">➕ Добавить</button>
-                            </div>
-                        </div>
-                    </div>
-                `;
-            });
-            
-            grid.innerHTML = html;
-        }
-
-        // Сброс всех данных
-        function resetAllData() {
-            if (confirm('Вы уверены, что хотите сбросить ВСЕ данные? Это действие нельзя отменить.')) {
-                // Останавливаем все таймеры
-                Object.keys(timerIntervals).forEach(key => {
-                    clearInterval(timerIntervals[key]);
-                });
-                timerIntervals = {};
-                
-                localStorage.removeItem('productivityGoals');
-                goals = [];
-                renderGoals();
-            }
-        }
-
-        // Загружаем данные при старте
-        document.addEventListener('DOMContentLoaded', loadData);
-
-        // Сохраняем данные перед закрытием
-        window.addEventListener('beforeunload', function() {
-            // Останавливаем все таймеры перед сохранением
-            Object.keys(timerIntervals).forEach(key => {
-                clearInterval(timerIntervals[key]);
-                const goal = goals.find(g => g.id === key);
-                if (goal) {
-                    goal.timerRunning = false;
-                }
-            });
-            saveData();
         });
-    </script>
-</body>
-</html>
+        
+        goal.timerRunning = true;
+        
+        // Очищаем предыдущий интервал если был
+        if (timerIntervals[goalId]) {
+            clearInterval(timerIntervals[goalId]);
+        }
+        
+        timerIntervals[goalId] = setInterval(() => {
+            goal.timerSeconds++;
+            updateTimerDisplay(goalId);
+            // Сохраняем каждую секунду, чтобы при обновлении страницы таймер не сбрасывался
+            saveData();
+        }, 1000);
+        
+        saveData();
+        renderGoals(); // Перерисовываем для обновления состояния кнопок
+    }
+
+    // Остановка таймера
+    function stopTimer(goalId) {
+        console.log('Останавливаем таймер для цели:', goalId); // Для отладки
+        
+        const goal = goals.find(g => g.id === goalId);
+        if (!goal) {
+            console.error('Цель не найдена:', goalId);
+            return;
+        }
+        
+        // Останавливаем интервал
+        if (timerIntervals[goalId]) {
+            clearInterval(timerIntervals[goalId]);
+            delete timerIntervals[goalId];
+            console.log('Интервал очищен');
+        }
+        
+        // Обновляем статус таймера
+        goal.timerRunning = false;
+        
+        // Добавляем время к прогрессу
+        if (goal.timerSeconds > 0) {
+            const hoursToAdd = goal.timerSeconds / 3600;
+            goal.currentHours = parseFloat((goal.currentHours + hoursToAdd).toFixed(2));
+            console.log(`Добавлено ${hoursToAdd.toFixed(2)} часов. Новый прогресс: ${goal.currentHours}`);
+            goal.timerSeconds = 0;
+        }
+        
+        // Обновляем отображение таймера
+        updateTimerDisplay(goalId);
+        
+        // Сохраняем данные
+        saveData();
+        
+        // Перерисовываем для обновления состояния кнопок
+        renderGoals();
+    }
+
+    // Сброс таймера
+    function resetTimer(goalId) {
+        const goal = goals.find(g => g.id === goalId);
+        if (!goal) return;
+        
+        if (goal.timerRunning) {
+            clearInterval(timerIntervals[goalId]);
+            delete timerIntervals[goalId];
+            goal.timerRunning = false;
+        }
+        
+        goal.timerSeconds = 0;
+        updateTimerDisplay(goalId);
+        saveData();
+        renderGoals(); // Перерисовываем для обновления состояния кнопок
+    }
+
+    // Обновление отображения таймера
+    function updateTimerDisplay(goalId) {
+        const goal = goals.find(g => g.id === goalId);
+        if (!goal) return;
+        
+        const timerElement = document.getElementById(`timer-${goalId}`);
+        if (timerElement) {
+            timerElement.textContent = formatTime(goal.timerSeconds);
+        }
+    }
+
+    // Ручное добавление времени
+    function addManualTime(goalId) {
+        const goal = goals.find(g => g.id === goalId);
+        if (!goal) return;
+        
+        const input = document.getElementById(`manual-${goalId}`);
+        const hours = parseFloat(input.value);
+        
+        if (hours && hours > 0) {
+            goal.currentHours = parseFloat((goal.currentHours + hours).toFixed(2));
+            input.value = '0';
+            saveData();
+            renderGoals();
+        } else {
+            alert('Введите положительное число часов');
+        }
+    }
+
+    // Отрисовка всех целей
+    function renderGoals() {
+        const grid = document.getElementById('goalsGrid');
+        
+        if (goals.length === 0) {
+            grid.innerHTML = '<div class="empty-state">✨ Добавьте свою первую цель!</div>';
+            return;
+        }
+        
+        let html = '';
+        goals.forEach(goal => {
+            const percentage = Math.min(100, (goal.currentHours / goal.goalHours)
